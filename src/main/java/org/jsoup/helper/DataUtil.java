@@ -404,23 +404,35 @@ public final class DataUtil {
     }
 
     private static @Nullable String detectCharsetFromBom(ControllableInputStream input) throws IOException {
-        byte[] bom = new byte[4];
-        input.mark(bom.length);
-        //noinspection ResultOfMethodCallIgnored
-        input.read(bom, 0, 4);
-        input.reset();
+    byte[] bom = new byte[4];
+    input.mark(bom.length);
+    input.read(bom, 0, 4);
+    input.reset();
 
-        // 16 and 32 decoders consume the BOM to determine be/le; utf-8 should be consumed here
-        if (bom[0] == 0x00 && bom[1] == 0x00 && bom[2] == (byte) 0xFE && bom[3] == (byte) 0xFF || // BE
-            bom[0] == (byte) 0xFF && bom[1] == (byte) 0xFE && bom[2] == 0x00 && bom[3] == 0x00) { // LE
-            return "UTF-32"; // and I hope it's on your system
-        } else if (bom[0] == (byte) 0xFE && bom[1] == (byte) 0xFF || // BE
-            bom[0] == (byte) 0xFF && bom[1] == (byte) 0xFE) {
-            return "UTF-16"; // in all Javas
-        } else if (bom[0] == (byte) 0xEF && bom[1] == (byte) 0xBB && bom[2] == (byte) 0xBF) {
-            input.read(bom, 0, 3); // consume the UTF-8 BOM
-            return "UTF-8"; // in all Javas
-        }
-        return null;
+    if (isUtf32Bom(bom)) {
+        return "UTF-32";
+    } else if (isUtf16Bom(bom)) {
+        return "UTF-16";
+    } else if (isUtf8Bom(bom)) {
+        input.read(bom, 0, 3);
+        return "UTF-8";
     }
+    return null;
+}
+
+private static boolean isUtf32Bom(byte[] bom) {
+    return (bom[0] == 0x00 && bom[1] == 0x00 && bom[2] == (byte) 0xFE && bom[3] == (byte) 0xFF) ||
+           (bom[0] == (byte) 0xFF && bom[1] == (byte) 0xFE && bom[2] == 0x00 && bom[3] == 0x00);
+}
+
+private static boolean isUtf16Bom(byte[] bom) {
+    return (bom[0] == (byte) 0xFE && bom[1] == (byte) 0xFF) ||
+           (bom[0] == (byte) 0xFF && bom[1] == (byte) 0xFE);
+}
+
+private static boolean isUtf8Bom(byte[] bom) {
+    return bom[0] == (byte) 0xEF && bom[1] == (byte) 0xBB && bom[2] == (byte) 0xBF;
+}
+
+
 }
