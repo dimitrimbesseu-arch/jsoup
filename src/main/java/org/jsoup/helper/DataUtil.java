@@ -252,9 +252,10 @@ public final class DataUtil {
         Document doc = null;
         // read the start of the stream and look for a BOM or meta charset:
         // look for BOM - overrides any other header or input
-        String bomCharset = detectCharsetFromBom(input); // resets / consumes appropriately
-        if (bomCharset != null)
-            charsetName = bomCharset;
+                // look for BOM - overrides any other header or input
+        charsetName = applyBomCharset(input, charsetName);
+
+
 
         if (charsetName == null) { // read ahead and determine from meta. safe first parse as UTF-8
             int origMax = input.max();
@@ -318,6 +319,24 @@ public final class DataUtil {
             charsetName = defaultCharsetName;
         Charset charset = charsetName.equals(defaultCharsetName) ? UTF_8 : Charset.forName(charsetName);
         return new CharsetDoc(charset, doc, input);
+    }
+
+
+        /**
+     * Detects and applies a BOM charset if present in the input stream.
+     * If a BOM is found, it overrides any header or user-provided charset.
+     *
+     * @param input the input stream to read from (resets/consumes appropriately)
+     * @param charsetName the current charset name (may be null)
+     * @return the BOM charset if found, otherwise the original charsetName
+     * @throws IOException on IO error
+     */
+    private static String applyBomCharset(ControllableInputStream input, @Nullable String charsetName) throws IOException {
+        String bomCharset = detectCharsetFromBom(input);
+        if (bomCharset != null) {
+            return bomCharset;
+        }
+        return charsetName;
     }
 
     static Document parseInputStream(CharsetDoc charsetDoc, String baseUri, Parser parser) throws IOException {
